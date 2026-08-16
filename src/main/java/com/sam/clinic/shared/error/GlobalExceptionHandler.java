@@ -2,10 +2,12 @@ package com.sam.clinic.shared.error;
 
 import com.sam.clinic.shared.web.CorrelationIdFilter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -71,6 +73,18 @@ public class GlobalExceptionHandler {
 				.toList();
 		List<Violation> violations = Stream.concat(
 				parameterViolations.stream(), crossParameterViolations.stream())
+				.sorted(Comparator.comparing(Violation::field).thenComparing(Violation::message))
+				.toList();
+		return validationResponse(violations, request);
+	}
+
+	@ExceptionHandler(ConstraintViolationException.class)
+	ResponseEntity<ProblemDetail> handleConstraintViolation(
+			ConstraintViolationException exception, HttpServletRequest request) {
+		List<Violation> violations = exception.getConstraintViolations().stream()
+				.map(violation -> new Violation(
+						lastPathSegment(violation.getPropertyPath()),
+						violation.getMessage()))
 				.sorted(Comparator.comparing(Violation::field).thenComparing(Violation::message))
 				.toList();
 		return validationResponse(violations, request);
@@ -145,5 +159,13 @@ public class GlobalExceptionHandler {
 		return ResponseEntity.status(problem.getStatus())
 				.contentType(MediaType.APPLICATION_PROBLEM_JSON)
 				.body(problem);
+	}
+
+	private static String lastPathSegment(jakarta.validation.Path path) {
+		return StreamSupport.stream(path.spliterator(), false)
+				.reduce((first, second) -> second)
+				.map(jakarta.validation.Path.Node::getName)
+				.filter(name -> !name.isBlank())
+				.orElse("request");
 	}
 }
