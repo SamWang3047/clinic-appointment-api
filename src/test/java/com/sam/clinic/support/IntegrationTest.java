@@ -6,12 +6,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
-@SpringBootTest
+@SpringBootTest(properties = "clinic.security.jwt.secret=integration-test-only-secret-with-at-least-thirty-two-bytes")
+@AutoConfigureMockMvc
 @Import(PostgreSqlContainerConfiguration.class)
 public @interface IntegrationTest {
 }

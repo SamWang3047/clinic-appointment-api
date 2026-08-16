@@ -19,6 +19,8 @@ import jakarta.validation.constraints.Positive;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.security.autoconfigure.SecurityAutoConfiguration;
+import org.springframework.boot.security.oauth2.server.resource.autoconfigure.OAuth2ResourceServerAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -31,7 +33,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@WebMvcTest(controllers = ErrorProbeController.class)
+@WebMvcTest(
+		controllers = ErrorProbeController.class,
+		excludeAutoConfiguration = {
+				SecurityAutoConfiguration.class,
+				OAuth2ResourceServerAutoConfiguration.class
+		})
 @Import({
 		GlobalExceptionHandler.class,
 		ProblemDetailsFactory.class,
