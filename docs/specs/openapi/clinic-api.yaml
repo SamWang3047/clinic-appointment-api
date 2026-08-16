@@ -1,0 +1,1271 @@
+openapi: 3.1.0
+info:
+  title: Clinic Appointment API
+  version: 1.0.0
+  description: >-
+    Target HTTP contract for the spec-driven clinic appointment interview
+    project. Implementation status is tracked separately from this contract.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Authentication
+  - name: Patients
+  - name: Doctors
+  - name: Availability
+  - name: Appointments
+  - name: Administration
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/patients/register:
+    post:
+      tags: [Patients]
+      operationId: registerPatient
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterPatientRequest'
+      responses:
+        '201':
+          description: Patient account and profile created
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/patients:
+    post:
+      tags: [Patients]
+      operationId: createPatientProfile
+      description: Receptionist creates a patient profile without credentials.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePatientProfileRequest'
+      responses:
+        '201':
+          description: Patient profile created
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/me/profile:
+    get:
+      tags: [Patients]
+      operationId: getMyProfile
+      responses:
+        '200':
+          description: Authenticated user's linked profile
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PatientResponse'
+                  - $ref: '#/components/schemas/DoctorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/doctors:
+    get:
+      tags: [Doctors]
+      operationId: listActiveDoctors
+      security: []
+      responses:
+        '200':
+          description: Active doctors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DoctorResponse'
+    post:
+      tags: [Doctors]
+      operationId: createDoctor
+      description: Administrator creates a doctor profile and linked account.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDoctorRequest'
+      responses:
+        '201':
+          description: Doctor created
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/doctors/{doctorId}:
+    parameters:
+      - $ref: '#/components/parameters/DoctorId'
+    get:
+      tags: [Doctors]
+      operationId: getPublicDoctor
+      security: []
+      responses:
+        '200':
+          description: Active doctor's public profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/doctors/{doctorId}/deactivate:
+    parameters:
+      - $ref: '#/components/parameters/DoctorId'
+    post:
+      tags: [Doctors]
+      operationId: deactivateDoctor
+      responses:
+        '200':
+          description: Doctor deactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/doctors/{doctorId}/available-slots:
+    parameters:
+      - $ref: '#/components/parameters/DoctorId'
+    get:
+      tags: [Availability]
+      operationId: listAvailableSlots
+      security: []
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/DurationMinutes'
+      responses:
+        '200':
+          description: Public available slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AvailableSlotResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/doctors/{doctorId}/availability/weekly:
+    parameters:
+      - $ref: '#/components/parameters/DoctorId'
+    get:
+      tags: [Availability]
+      operationId: getWeeklyAvailability
+      responses:
+        '200':
+          description: Weekly availability
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyAvailabilityResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Availability]
+      operationId: replaceWeeklyAvailability
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WeeklyAvailabilityRequest'
+      responses:
+        '200':
+          description: Weekly availability replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyAvailabilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/doctors/{doctorId}/availability/overrides/{date}:
+    parameters:
+      - $ref: '#/components/parameters/DoctorId'
+      - name: date
+        in: path
+        required: true
+        schema:
+          type: string
+          format: date
+    put:
+      tags: [Availability]
+      operationId: replaceAvailabilityOverride
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AvailabilityOverrideRequest'
+      responses:
+        '200':
+          description: Date override replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AvailabilityOverrideResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [Availability]
+      operationId: deleteAvailabilityOverride
+      responses:
+        '204':
+          description: Override removed; recurring schedule applies
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/me/appointments:
+    get:
+      tags: [Appointments]
+      operationId: listMyAppointments
+      parameters:
+        - $ref: '#/components/parameters/FromInstant'
+        - $ref: '#/components/parameters/ToInstant'
+        - $ref: '#/components/parameters/Statuses'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Role-scoped appointments for patient or doctor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Appointments]
+      operationId: createMyAppointment
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSelfAppointmentRequest'
+      responses:
+        '201':
+          description: Pending appointment created
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/appointments:
+    get:
+      tags: [Appointments]
+      operationId: searchClinicAppointments
+      parameters:
+        - $ref: '#/components/parameters/FromInstant'
+        - $ref: '#/components/parameters/ToInstant'
+        - $ref: '#/components/parameters/Statuses'
+        - name: patientId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: doctorId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Authorised clinic appointment page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Appointments]
+      operationId: createAppointmentForPatient
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaffAppointmentRequest'
+      responses:
+        '201':
+          description: Pending appointment created
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/appointments/{appointmentId}:
+    parameters:
+      - $ref: '#/components/parameters/AppointmentId'
+    get:
+      tags: [Appointments]
+      operationId: getAppointment
+      responses:
+        '200':
+          description: Role-appropriate appointment detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/appointments/{appointmentId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/AppointmentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+    post:
+      tags: [Appointments]
+      operationId: confirmAppointment
+      responses:
+        '200':
+          $ref: '#/components/responses/AppointmentUpdated'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/appointments/{appointmentId}/decline:
+    parameters:
+      - $ref: '#/components/parameters/AppointmentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+    post:
+      tags: [Appointments]
+      operationId: declineAppointment
+      responses:
+        '200':
+          $ref: '#/components/responses/AppointmentUpdated'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/appointments/{appointmentId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/AppointmentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+    post:
+      tags: [Appointments]
+      operationId: cancelAppointment
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelAppointmentRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AppointmentUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/appointments/{appointmentId}/reschedule:
+    parameters:
+      - $ref: '#/components/parameters/AppointmentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+    post:
+      tags: [Appointments]
+      operationId: rescheduleAppointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RescheduleAppointmentRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AppointmentUpdated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/appointments/{appointmentId}/complete:
+    parameters:
+      - $ref: '#/components/parameters/AppointmentId'
+      - $ref: '#/components/parameters/IdempotencyKey'
+    post:
+      tags: [Appointments]
+      operationId: completeAppointment
+      responses:
+        '200':
+          $ref: '#/components/responses/AppointmentUpdated'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/accounts:
+    post:
+      tags: [Administration]
+      operationId: createStaffAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStaffAccountRequest'
+      responses:
+        '201':
+          description: Staff account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/accounts/{accountId}/disable:
+    parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Administration]
+      operationId: disableAccount
+      responses:
+        '200':
+          description: Account disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/admin/audit-events:
+    get:
+      tags: [Administration]
+      operationId: listAuditEvents
+      parameters:
+        - name: appointmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/FromInstant'
+        - $ref: '#/components/parameters/ToInstant'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Authorised audit page without clinical reasons
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    DoctorId:
+      name: doctorId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    AppointmentId:
+      name: appointmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID scoped to authenticated account and operation for 24 hours.
+      schema:
+        type: string
+        format: uuid
+    DurationMinutes:
+      name: durationMinutes
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/AppointmentDuration'
+    FromInstant:
+      name: from
+      in: query
+      schema:
+        type: string
+        format: date-time
+    ToInstant:
+      name: to
+      in: query
+      schema:
+        type: string
+        format: date-time
+    Statuses:
+      name: status
+      in: query
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/AppointmentStatus'
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    Size:
+      name: size
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  responses:
+    AppointmentUpdated:
+      description: Appointment command applied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppointmentResponse'
+    BadRequest:
+      description: Malformed or invalid request
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Unauthorized:
+      description: Authentication required or invalid
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Forbidden:
+      description: Authenticated role cannot invoke this capability
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    NotFound:
+      description: Resource absent or concealed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    Conflict:
+      description: State, schedule, duplicate or idempotency conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+    TooManyRequests:
+      description: Rate limit exceeded
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetail'
+
+  schemas:
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+          writeOnly: true
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          const: Bearer
+        expiresIn:
+          type: integer
+          const: 1800
+    RegisterPatientRequest:
+      type: object
+      additionalProperties: false
+      required: [fullName, email, phone, password]
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 32
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+          writeOnly: true
+    CreatePatientProfileRequest:
+      type: object
+      additionalProperties: false
+      required: [fullName, email, phone]
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        phone:
+          type: string
+          minLength: 1
+          maxLength: 32
+    PatientResponse:
+      type: object
+      additionalProperties: false
+      required: [id, fullName, email, phone, hasLoginAccount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        hasLoginAccount:
+          type: boolean
+    CreateDoctorRequest:
+      type: object
+      additionalProperties: false
+      required: [fullName, specialty, loginEmail, initialPassword]
+      properties:
+        fullName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        specialty:
+          type: string
+          minLength: 1
+          maxLength: 80
+        loginEmail:
+          type: string
+          format: email
+          maxLength: 255
+        initialPassword:
+          type: string
+          minLength: 10
+          maxLength: 128
+          writeOnly: true
+    DoctorResponse:
+      type: object
+      additionalProperties: false
+      required: [id, fullName, specialty, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        specialty:
+          type: string
+        active:
+          type: boolean
+    AppointmentDuration:
+      type: integer
+      enum: [15, 30, 45, 60]
+    AppointmentStatus:
+      type: string
+      enum: [PENDING, CONFIRMED, DECLINED, CANCELLED, COMPLETED]
+    DayOfWeek:
+      type: string
+      enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+    LocalTimeRange:
+      type: object
+      additionalProperties: false
+      required: [startTime, endTime]
+      properties:
+        startTime:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          examples: ['09:00']
+        endTime:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          examples: ['17:00']
+    WeeklyTimeRange:
+      type: object
+      additionalProperties: false
+      required: [dayOfWeek, startTime, endTime]
+      properties:
+        dayOfWeek:
+          $ref: '#/components/schemas/DayOfWeek'
+        startTime:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          examples: ['09:00']
+        endTime:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          examples: ['17:00']
+    WeeklyAvailabilityRequest:
+      type: object
+      additionalProperties: false
+      required: [intervals]
+      properties:
+        intervals:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyTimeRange'
+    WeeklyAvailabilityResponse:
+      type: object
+      additionalProperties: false
+      required: [doctorId, timeZone, intervals]
+      properties:
+        doctorId:
+          type: string
+          format: uuid
+        timeZone:
+          type: string
+          const: Australia/Melbourne
+        intervals:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeeklyTimeRange'
+    AvailabilityOverrideRequest:
+      type: object
+      additionalProperties: false
+      required: [intervals]
+      properties:
+        intervals:
+          type: array
+          description: Empty means unavailable for the whole local date.
+          items:
+            $ref: '#/components/schemas/LocalTimeRange'
+    AvailabilityOverrideResponse:
+      type: object
+      additionalProperties: false
+      required: [doctorId, date, timeZone, intervals]
+      properties:
+        doctorId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        timeZone:
+          type: string
+          const: Australia/Melbourne
+        intervals:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalTimeRange'
+    AvailableSlotResponse:
+      type: object
+      additionalProperties: false
+      required: [startAt, endAt, durationMinutes]
+      properties:
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          $ref: '#/components/schemas/AppointmentDuration'
+    CreateSelfAppointmentRequest:
+      type: object
+      additionalProperties: false
+      required: [doctorId, startAt, durationMinutes, reason]
+      properties:
+        doctorId:
+          type: string
+          format: uuid
+        startAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          $ref: '#/components/schemas/AppointmentDuration'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    CreateStaffAppointmentRequest:
+      type: object
+      additionalProperties: false
+      required: [patientId, doctorId, startAt, durationMinutes, reason]
+      properties:
+        patientId:
+          type: string
+          format: uuid
+        doctorId:
+          type: string
+          format: uuid
+        startAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          $ref: '#/components/schemas/AppointmentDuration'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    CancelAppointmentRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    RescheduleAppointmentRequest:
+      type: object
+      additionalProperties: false
+      required: [startAt, durationMinutes]
+      properties:
+        startAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          $ref: '#/components/schemas/AppointmentDuration'
+    DoctorSummary:
+      type: object
+      additionalProperties: false
+      required: [id, fullName, specialty]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        specialty:
+          type: string
+    PatientSummary:
+      type: object
+      additionalProperties: false
+      required: [id, fullName]
+      properties:
+        id:
+          type: string
+          format: uuid
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+          description: Present only when the caller's response view permits it.
+        phone:
+          type: string
+          description: Present only when the caller's response view permits it.
+    AppointmentResponse:
+      type: object
+      additionalProperties: false
+      required: [id, doctor, patient, startAt, endAt, durationMinutes, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        doctor:
+          $ref: '#/components/schemas/DoctorSummary'
+        patient:
+          $ref: '#/components/schemas/PatientSummary'
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          $ref: '#/components/schemas/AppointmentDuration'
+        status:
+          $ref: '#/components/schemas/AppointmentStatus'
+        reason:
+          type: string
+          description: Omitted when the caller's response view does not permit it.
+        cancellationReason:
+          type: string
+          description: Omitted when absent or not permitted for the caller.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AppointmentPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, size, totalElements, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointmentResponse'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    AccountRole:
+      type: string
+      enum: [PATIENT, DOCTOR, RECEPTIONIST, ADMIN]
+    CreateStaffAccountRequest:
+      type: object
+      additionalProperties: false
+      required: [email, initialPassword, role]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        initialPassword:
+          type: string
+          minLength: 10
+          maxLength: 128
+          writeOnly: true
+        role:
+          type: string
+          enum: [RECEPTIONIST, ADMIN]
+    AccountResponse:
+      type: object
+      additionalProperties: false
+      required: [id, email, role, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/AccountRole'
+        active:
+          type: boolean
+    AuditEventResponse:
+      type: object
+      additionalProperties: false
+      required: [eventId, actorAccountId, actorRole, action, occurredAt, correlationId]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        appointmentId:
+          type: string
+          format: uuid
+        actorAccountId:
+          type: string
+          format: uuid
+        actorRole:
+          $ref: '#/components/schemas/AccountRole'
+        action:
+          type: string
+        previousStatus:
+          $ref: '#/components/schemas/AppointmentStatus'
+        newStatus:
+          $ref: '#/components/schemas/AppointmentStatus'
+        previousStartAt:
+          type: string
+          format: date-time
+        previousEndAt:
+          type: string
+          format: date-time
+        newStartAt:
+          type: string
+          format: date-time
+        newEndAt:
+          type: string
+          format: date-time
+        occurredAt:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+    AuditEventPage:
+      type: object
+      additionalProperties: false
+      required: [items, page, size, totalElements, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEventResponse'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+          maximum: 100
+        totalElements:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+    Violation:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    ProblemDetail:
+      type: object
+      required: [type, title, status, errorCode, correlationId]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+        errorCode:
+          type: string
+        correlationId:
+          type: string
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Violation'
