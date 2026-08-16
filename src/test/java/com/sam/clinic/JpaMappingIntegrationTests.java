@@ -12,7 +12,6 @@ import com.sam.clinic.patient.PatientRepository;
 import com.sam.clinic.support.IntegrationTest;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,8 +43,8 @@ class JpaMappingIntegrationTests {
 		Doctor doctor = doctorRepository.save(new Doctor("Dr Alice Chen", "General Practice"));
 		Patient patient = patientRepository.save(
 				new Patient("Sam Patient", "SAM.PATIENT@example.com", "+61 400 000 000"));
-		Instant startAt = Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
-		Instant endAt = startAt.plus(30, ChronoUnit.MINUTES);
+		Instant startAt = Instant.parse("2030-01-07T00:00:00Z");
+		Instant endAt = startAt.plusSeconds(30 * 60);
 		Appointment appointment = appointmentRepository.saveAndFlush(
 				new Appointment(doctor, patient, startAt, endAt, "Initial consultation"));
 		UUID appointmentId = appointment.getId();
@@ -58,8 +57,9 @@ class JpaMappingIntegrationTests {
 		assertThat(reloaded.getPatient().getEmail()).isEqualTo("sam.patient@example.com");
 		assertThat(reloaded.getStartAt()).isEqualTo(startAt);
 		assertThat(reloaded.getEndAt()).isEqualTo(endAt);
-		assertThat(reloaded.getStatus()).isEqualTo(AppointmentStatus.BOOKED);
+		assertThat(reloaded.getStatus()).isEqualTo(AppointmentStatus.PENDING);
 		assertThat(reloaded.getReason()).isEqualTo("Initial consultation");
+		assertThat(reloaded.getCancellationReason()).isNull();
 		assertThat(reloaded.getCreatedAt()).isNotNull();
 		assertThat(reloaded.getUpdatedAt()).isNotNull();
 	}
