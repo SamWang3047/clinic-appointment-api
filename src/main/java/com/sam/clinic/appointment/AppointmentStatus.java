@@ -1,7 +1,13 @@
 package com.sam.clinic.appointment;
 
 public enum AppointmentStatus {
-	BOOKED,
+	PENDING,
+	CONFIRMED,
+	DECLINED,
 	CANCELLED,
-	COMPLETED
+	COMPLETED;
+
+	public boolean reservesTime() {
+		return this == PENDING || this == CONFIRMED;
+	}
 }
