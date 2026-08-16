@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -104,6 +105,15 @@ public class GlobalExceptionHandler {
 		return response(
 				ApiErrorCode.CONCURRENT_MODIFICATION,
 				"The resource changed while the request was being processed.",
+				request);
+	}
+
+	@ExceptionHandler(AccessDeniedException.class)
+	ResponseEntity<ProblemDetail> handleAccessDenied(
+			AccessDeniedException exception, HttpServletRequest request) {
+		return response(
+				ApiErrorCode.ACCESS_DENIED,
+				"The authenticated account cannot perform this operation.",
 				request);
 	}
 
