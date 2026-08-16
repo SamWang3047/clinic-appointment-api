@@ -1,9 +1,9 @@
 package com.sam.clinic;
 
+import com.sam.clinic.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+@IntegrationTest
 class ClinicAppointmentApiApplicationTests {
 
 	@Test

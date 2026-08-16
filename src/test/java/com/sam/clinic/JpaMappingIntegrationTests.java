@@ -9,16 +9,16 @@ import com.sam.clinic.doctor.Doctor;
 import com.sam.clinic.doctor.DoctorRepository;
 import com.sam.clinic.patient.Patient;
 import com.sam.clinic.patient.PatientRepository;
+import com.sam.clinic.support.IntegrationTest;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
+@IntegrationTest
 @Transactional
 class JpaMappingIntegrationTests {
 
