@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Localised specifications ###
+# English specifications are committed. Chinese mirrors stay local.
+/docs/specs/zh-CN/
